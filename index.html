@@ -115,13 +115,6 @@ main{padding:6px 0 60px;}
 .add-view.active{display:block;}
 .add-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
 .add-section-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;color:var(--accent);margin-bottom:12px;}
-.add-token-wrap{display:flex;gap:8px;align-items:center;}
-.add-token-wrap input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:inherit;font-size:13px;outline:none;}
-.add-token-wrap input:focus{border-color:var(--accent);}
-.btn-save-token{background:var(--accent);color:#f4ede0;font-family:'Bebas Neue',sans-serif;font-size:14px;padding:9px 16px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap;}
-.token-status{font-size:12px;margin-top:6px;}
-.token-ok{color:var(--seen);}
-.token-missing{color:var(--live);}
 
 /* Scanner */
 .scan-area{position:relative;width:100%;border-radius:10px;overflow:hidden;background:#000;aspect-ratio:1;margin-bottom:12px;display:flex;align-items:center;justify-content:center;}
@@ -396,16 +389,6 @@ table.tracks tr:hover td{background:var(--surface2);}
 <!-- ADD NEW ENTRY -->
 <div id="viewAdd" class="add-view">
 
-  <!-- Discogs Token -->
-  <div class="add-section">
-    <div class="add-section-title">⚙️ Discogs API-Token</div>
-    <div class="add-token-wrap">
-      <input type="password" id="discogsTokenInput" placeholder="Personal Access Token…">
-      <button class="btn-save-token" onclick="saveToken()">Speichern</button>
-    </div>
-    <div class="token-status" id="tokenStatus"></div>
-  </div>
-
   <!-- Barcode Scanner -->
   <div class="add-section">
     <div class="add-section-title">📷 Barcode Scannen</div>
@@ -595,6 +578,13 @@ const CONCERTS=[];
 const SUPABASE_URL='https://igvmmojnzoapmveskivi.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlndm1tb2puem9hcG12ZXNraXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1ODM5NDgsImV4cCI6MjEwMzE1OTk0OH0.Whxc1X0kpqR9OMEGCgxrbBuR3xQUF4ycw2NApNeelaU';
 
+// Discogs proxy (Edge Function) — keeps the Discogs token server-side
+// instead of asking every device/browser for it.
+function discogsFetch(params){
+  const url=SUPABASE_URL+'/functions/v1/discogs-search?'+new URLSearchParams(params).toString();
+  return fetch(url,{headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
+}
+
 async function sbFetch(path){
   const resp=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
   if(!resp.ok)throw new Error('Supabase '+resp.status+': '+await resp.text());
@@ -672,7 +662,6 @@ function switchTab(tab){
   });
   if(tab==='colored')renderColored();
   if(tab==='concerts')renderConcerts();
-  if(tab==='add')initAddTab();
   if(tab==='newentries')renderNewEntries();
 }
 
@@ -956,12 +945,10 @@ function clearEditCover(){
 }
 
 async function fetchDiscogscover(){
-  if(!discogsToken){alert('Bitte zuerst Discogs-Token eingeben.');return;}
   const artist = document.getElementById('editArtist').value;
   const title = document.getElementById('editTitle').value;
   try{
-    const url = `https://api.discogs.com/database/search?release_title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}&token=${discogsToken}&per_page=1&type=release`;
-    const resp = await fetch(url,{headers:{'User-Agent':'PatCollection/1.0'}});
+    const resp = await discogsFetch({release_title:title, artist, per_page:1, type:'release'});
     const data = await resp.json();
     if(data.results&&data.results[0]){
       const img = data.results[0].cover_image||data.results[0].thumb||'';
@@ -1040,27 +1027,6 @@ document.getElementById('editOverlay').addEventListener('click', e => {
 // ── ADD / SCAN ────────────────────────────────────────
 let scanStream=null;
 let scanInterval=null;
-let discogsToken=localStorage.getItem('discogsToken')||'';
-
-function initAddTab(){
-  const inp=document.getElementById('discogsTokenInput');
-  if(discogsToken){inp.value=discogsToken;showTokenStatus(true);}
-  else showTokenStatus(false);
-}
-
-function saveToken(){
-  const v=document.getElementById('discogsTokenInput').value.trim();
-  if(!v)return;
-  localStorage.setItem('discogsToken',v);
-  discogsToken=v;
-  showTokenStatus(true);
-}
-
-function showTokenStatus(ok){
-  const el=document.getElementById('tokenStatus');
-  el.className='token-status '+(ok?'token-ok':'token-missing');
-  el.textContent=ok?'✓ Token gespeichert – Discogs aktiv':'⚠ Kein Token – nur manuelle Eingabe möglich';
-}
 
 async function startScan(){
   const btn=document.getElementById('btnStartScan');
@@ -1115,15 +1081,8 @@ async function lookupBarcode(code){
   info.textContent='Suche auf Discogs…';
   document.getElementById('addForm').classList.add('visible');
 
-  if(!discogsToken){
-    info.textContent='Kein Discogs-Token – bitte manuell ausfüllen.';
-    document.getElementById('barcodeManual').value=code;
-    return;
-  }
-
   try{
-    const url=`https://api.discogs.com/database/search?barcode=${encodeURIComponent(code)}&token=${discogsToken}&per_page=1`;
-    const resp=await fetch(url,{headers:{'User-Agent':'PatCollection/1.0'}});
+    const resp=await discogsFetch({barcode:code, per_page:1});
     const data=await resp.json();
     if(data.results&&data.results.length>0){
       const r=data.results[0];
@@ -1297,10 +1256,6 @@ function coverKey(a){
 }
 
 async function startCoverImport(){
-  if(!discogsToken){
-    alert('Bitte zuerst den Discogs-Token eingeben.');
-    return;
-  }
   if(coverImportRunning) return;
   coverImportRunning = true;
   coverImportStop = false;
@@ -1333,10 +1288,7 @@ async function startCoverImport(){
     }
 
     try{
-      const q = encodeURIComponent(a.title);
-      const artist = encodeURIComponent(a.artist);
-      const url = `https://api.discogs.com/database/search?release_title=${q}&artist=${artist}&token=${discogsToken}&per_page=1&type=release`;
-      const resp = await fetch(url, {headers:{'User-Agent':'PatCollection/1.0'}});
+      const resp = await discogsFetch({release_title:a.title, artist:a.artist, per_page:1, type:'release'});
 
       // Handle rate limiting
       if(resp.status === 429){
