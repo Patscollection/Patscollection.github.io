@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>PatCollection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4ede0;--surface:#ede4d3;--surface2:#e5dac6;--border:#d0c4ad;--accent:#8b4513;--accent2:#a0522d;--text:#2a1a0a;--muted:#7a6a58;--live:#c0392b;--vinyl:#6b4c9a;--cd:#2e6da4;--dvd:#b85c00;--box:#2e7d4f;--single:#8b2252;--seen:#2e7d4f;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;min-height:100vh;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23f4ede0'/%3E%3Ccircle cx='1' cy='1' r='.5' fill='%23d0c4ad' opacity='.3'/%3E%3C/svg%3E");}
+.tab-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:110;}
+.tab-btn{flex:1;padding:14px 4px;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.coll-header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;position:sticky;top:41px;z-index:100;}
+.header-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--accent);white-space:nowrap;}
+.count-badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:13px;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.search-wrap{position:relative;flex:1;}
+.search-wrap input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 14px 9px 36px;border-radius:8px;font-family:inherit;font-size:14px;outline:none;transition:border-color .2s;}
+.search-wrap input:focus{border-color:var(--accent);}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;}
+.filters{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.filter-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:10px 18px;border-radius:8px;font-family:inherit;font-size:15px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.filter-btn:hover{border-color:var(--accent);color:var(--text);}
+.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#f4ede0;font-weight:500;}
+.filter-sep{width:1px;height:18px;background:var(--border);}
+select.sort-sel{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:9px 12px;border-radius:8px;font-family:inherit;font-size:15px;cursor:pointer;outline:none;}
+.alpha-bar{display:flex;flex-wrap:wrap;gap:2px;padding:7px 16px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:143px;z-index:90;}
+.alpha-btn{background:none;border:none;color:var(--muted);font-family:'Bebas Neue',sans-serif;font-size:22px;padding:5px 8px;cursor:pointer;border-radius:4px;transition:all .15s;}
+.alpha-btn.has-data{color:var(--text);}
+.alpha-btn:hover{color:var(--accent);}
+main{padding:6px 0 60px;}
+.artist-block{border-bottom:1px solid var(--border);}
+.artist-header{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;user-select:none;transition:background .1s;}
+.artist-header:hover{background:var(--surface);}
+.artist-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;flex:1;}
+
+.badge-seen{background:var(--seen);color:#fff;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 5px;border-radius:4px;text-transform:uppercase;}
+.album-count{color:var(--muted);font-size:13px;}
+.chevron{color:var(--muted);font-size:11px;transition:transform .2s;}
+.artist-block.open .chevron{transform:rotate(90deg);}
+.album-list{display:none;}
+.artist-block.open .album-list{display:block;}
+.album-row{display:flex;align-items:flex-start;gap:10px;padding:9px 16px 9px 30px;border-top:1px solid var(--border);cursor:pointer;transition:background .1s;}
+.album-row:hover{background:var(--surface);}
+.album-cover{width:40px;height:40px;border-radius:4px;object-fit:cover;background:var(--surface2);flex-shrink:0;border:1px solid var(--border);}
+.cover-placeholder{width:40px;height:40px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--border);}
+.album-info{flex:1;min-width:0;}
+.album-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.album-meta{display:flex;align-items:center;gap:5px;margin-top:2px;flex-wrap:wrap;}
+.album-year{color:var(--muted);font-size:13px;}
+.fmt-badge{font-size:11px;padding:2px 7px;border-radius:4px;font-weight:500;border:1px solid transparent;}
+.fmt-vinyl{color:var(--vinyl);border-color:var(--vinyl);}
+.fmt-cd{color:var(--cd);border-color:var(--cd);}
+.fmt-dvd{color:var(--dvd);border-color:var(--dvd);}
+.fmt-box{color:var(--box);border-color:var(--box);}
+.fmt-single{color:var(--single);border-color:var(--single);}
+.fmt-other{color:var(--muted);border-color:var(--muted);}
+.special-tag{font-size:12px;color:var(--accent2);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.seen-live-block{border-top:1px solid var(--border);padding:8px 16px 8px 30px;background:rgba(46,125,79,0.08);}
+.seen-live-title{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--seen);margin-bottom:6px;font-weight:500;}
+.seen-concert-row{display:flex;align-items:baseline;gap:8px;padding:3px 0;border-bottom:1px solid var(--border);}
+.seen-concert-row:last-child{border-bottom:none;}
+.seen-date{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--accent);min-width:90px;flex-shrink:0;}
+.seen-venue{font-size:13px;color:var(--muted);}
+
+
+
+/* Cover Import */
+.cover-import-section{}
+.progress-wrap{background:var(--surface2);border-radius:8px;height:12px;overflow:hidden;margin:10px 0;}
+.progress-bar{height:100%;background:var(--accent);border-radius:8px;transition:width .3s;width:0%;}
+.progress-label{font-size:12px;color:var(--muted);margin-bottom:4px;display:flex;justify-content:space-between;}
+.btn-cover-import{width:100%;background:var(--accent2);color:#f4ede0;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;padding:13px;border-radius:10px;border:none;cursor:pointer;margin-bottom:8px;}
+.btn-cover-import:disabled{opacity:.5;cursor:not-allowed;}
+.btn-cover-stop{width:100%;background:var(--surface2);border:1px solid var(--live);color:var(--live);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;padding:10px;border-radius:10px;cursor:pointer;display:none;}
+.cover-import-log{font-size:11px;color:var(--muted);height:60px;overflow-y:auto;background:var(--surface2);border-radius:6px;padding:6px 8px;margin-top:6px;font-family:monospace;}
+
+
+/* Export */
+.btn-export{width:100%;background:var(--box);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;padding:13px;border-radius:10px;border:none;cursor:pointer;margin-bottom:8px;}
+.btn-export:hover{opacity:.9;}
+.export-options{display:flex;gap:8px;margin-bottom:8px;}
+.btn-export-fmt{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;padding:10px;border-radius:8px;cursor:pointer;}
+.btn-export-fmt:hover{border-color:var(--accent);color:var(--accent);}
+
+/* Edit Modal */
+.edit-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;padding:16px;overflow-y:auto;}
+.edit-overlay.open{display:flex;align-items:flex-start;justify-content:center;}
+.edit-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:520px;overflow:hidden;position:relative;}
+.edit-card-head{background:var(--accent);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
+.edit-card-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;color:#f4ede0;}
+.edit-close{background:none;border:none;color:#f4ede0;font-size:18px;cursor:pointer;padding:0 4px;}
+.edit-body{padding:16px 18px;}
+.edit-cover-row{display:flex;gap:12px;align-items:center;margin-bottom:14px;}
+.edit-cover-img{width:64px;height:64px;border-radius:6px;object-fit:cover;border:1px solid var(--border);background:var(--surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--muted);overflow:hidden;}
+.edit-cover-img img{width:100%;height:100%;object-fit:cover;}
+.edit-cover-actions{display:flex;flex-direction:column;gap:6px;flex:1;}
+.btn-edit-cover{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:13px;padding:8px 12px;border-radius:7px;cursor:pointer;text-align:center;}
+.btn-edit-cover:hover{border-color:var(--accent);}
+#editCoverFile{display:none;}
+.edit-actions{display:flex;gap:8px;margin-top:14px;}
+.btn-edit-save{flex:1;background:var(--seen);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;padding:12px;border-radius:8px;border:none;cursor:pointer;}
+.btn-edit-delete{background:var(--surface2);border:1px solid var(--live);color:var(--live);font-family:'Bebas Neue',sans-serif;font-size:14px;padding:12px 16px;border-radius:8px;cursor:pointer;}
+.btn-edit-save:hover{opacity:.9;}
+.btn-edit-delete:hover{background:var(--live);color:#fff;}
+
+/* ── ADD TAB ── */
+.add-view{display:none;padding:16px 16px 60px;max-width:520px;margin:0 auto;}
+.add-view.active{display:block;}
+.add-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
+.add-section-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;color:var(--accent);margin-bottom:12px;}
+.add-token-wrap{display:flex;gap:8px;align-items:center;}
+.add-token-wrap input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:inherit;font-size:13px;outline:none;}
+.add-token-wrap input:focus{border-color:var(--accent);}
+.btn-save-token{background:var(--accent);color:#f4ede0;font-family:'Bebas Neue',sans-serif;font-size:14px;padding:9px 16px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap;}
+.token-status{font-size:12px;margin-top:6px;}
+.token-ok{color:var(--seen);}
+.token-missing{color:var(--live);}
+
+/* Scanner */
+.scan-area{position:relative;width:100%;border-radius:10px;overflow:hidden;background:#000;aspect-ratio:1;margin-bottom:12px;display:flex;align-items:center;justify-content:center;}
+.scan-area video{width:100%;height:100%;object-fit:cover;}
+.scan-crosshair{position:absolute;width:60%;height:60%;border:2px solid var(--accent);border-radius:8px;pointer-events:none;}
+.btn-scan{width:100%;background:var(--accent);color:#f4ede0;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;padding:13px;border-radius:10px;border:none;cursor:pointer;margin-bottom:8px;}
+.btn-scan:disabled{opacity:.5;cursor:not-allowed;}
+.scan-result-info{font-size:13px;color:var(--muted);text-align:center;min-height:20px;margin-bottom:8px;}
+
+/* Manual barcode */
+.barcode-manual-wrap{display:flex;gap:8px;margin-bottom:8px;}
+.barcode-manual-wrap input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:inherit;font-size:14px;outline:none;}
+.btn-lookup{background:var(--surface2);border:1px solid var(--accent);color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:14px;padding:9px 16px;border-radius:8px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;}
+
+/* Add form */
+.add-form{display:none;}
+.add-form.visible{display:block;}
+.form-row{margin-bottom:10px;}
+.form-label{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
+.form-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:inherit;font-size:15px;outline:none;}
+.form-input:focus{border-color:var(--accent);}
+select.form-input{cursor:pointer;}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.btn-add-confirm{width:100%;background:var(--seen);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;padding:14px;border-radius:10px;border:none;cursor:pointer;margin-top:4px;}
+.btn-add-confirm:hover{opacity:.9;}
+.discogs-preview{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px;display:none;}
+.discogs-preview.visible{display:flex;gap:10px;align-items:flex-start;}
+.discogs-preview img{width:56px;height:56px;border-radius:6px;object-fit:cover;flex-shrink:0;}
+.discogs-preview-info{flex:1;}
+.discogs-preview-title{font-weight:500;font-size:14px;}
+.discogs-preview-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.add-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--seen);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;padding:12px 24px;border-radius:10px;display:none;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,.2);}
+.add-toast.show{display:block;animation:toastIn .3s ease;}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+/* NEW entries tab */
+.new-entries-view{display:none;padding-bottom:60px;}
+.new-entries-view.active{display:block;}
+.new-entries-header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;position:sticky;top:41px;z-index:100;display:flex;align-items:center;gap:10px;}
+.new-entries-count{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:13px;padding:3px 10px;border-radius:10px;}
+.new-entry-row{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);}
+.new-entry-info{flex:1;}
+.new-entry-artist{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.5px;}
+.new-entry-title{font-size:14px;color:var(--muted);margin-top:1px;}
+.new-entry-meta{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;align-items:center;}
+.new-entry-date{font-size:11px;color:var(--muted);}
+.btn-delete-entry{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:color .15s;}
+.btn-delete-entry:hover{color:var(--live);}
+
+.cover-upload-wrap{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
+.cover-upload-preview{width:60px;height:60px;border-radius:8px;object-fit:cover;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--muted);flex-shrink:0;overflow:hidden;}
+.cover-upload-preview img{width:100%;height:100%;object-fit:cover;}
+.btn-upload-cover{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;padding:10px 16px;border-radius:8px;cursor:pointer;flex:1;text-align:center;}
+.btn-upload-cover:hover{border-color:var(--accent);color:var(--accent);}
+#fCoverFile{display:none;}
+
+
+/* ── RANDOM TAB ── */
+.random-view{display:none;flex-direction:column;align-items:center;padding:30px 20px 60px;min-height:calc(100vh - 41px);}
+.random-view.active{display:flex;}
+.random-hint{font-size:12px;color:var(--muted);margin-bottom:28px;text-align:center;letter-spacing:.5px;}
+
+/* Vinyl record */
+.vinyl-wrap{position:relative;width:240px;height:240px;cursor:pointer;margin-bottom:32px;}
+.vinyl-record{width:240px;height:240px;border-radius:50%;background:radial-gradient(circle at 50% 50%,#1a1208 0%,#0d0a05 18%,#1f1810 19%,#0d0a05 20%,#1f1810 32%,#0d0a05 33%,#1f1810 45%,#0d0a05 46%,#1f1810 58%,#0d0a05 59%,#1f1810 71%,#0d0a05 72%,#1f1810 84%,#0d0a05 85%,#1a1208 100%);box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 0 2px #a08060;position:relative;transition:transform .05s linear;}
+.vinyl-record.spinning{animation:spin 1.8s linear infinite;}
+.vinyl-record.spin-out{animation:spinOut .6s ease-in forwards;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+@keyframes spinOut{from{transform:rotate(0deg) scale(1);}to{transform:rotate(720deg) scale(0.85);}}
+.vinyl-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,#d4691e 0%,#8b4513 60%,#5c2e0a 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+.vinyl-label-text{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:1px;color:#f4ede0;text-align:center;line-height:1.2;padding:4px;}
+.vinyl-shine{position:absolute;top:10px;left:30px;width:60px;height:30px;background:radial-gradient(ellipse,rgba(255,255,255,.08) 0%,transparent 70%);border-radius:50%;pointer-events:none;}
+.vinyl-spinbtn{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);background:var(--accent);color:#f4ede0;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;padding:12px 32px;border-radius:24px;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(232,197,71,.3);transition:all .2s;white-space:nowrap;}
+.vinyl-spinbtn:hover{background:var(--accent2);transform:translateX(-50%) scale(1.05);}
+
+/* Result card */
+.result-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;box-shadow:0 4px 20px rgba(100,60,20,.15);opacity:0;transform:translateY(16px);transition:opacity .4s ease,transform .4s ease;}
+.result-card.visible{opacity:1;transform:translateY(0);}
+.result-cover-wrap{width:120px;height:120px;margin:0 auto 14px;border-radius:8px;overflow:hidden;background:var(--surface2);border:1px solid var(--border);}
+.result-cover-wrap img{width:100%;height:100%;object-fit:cover;}
+.result-cover-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;color:var(--border);}
+.result-artist{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--muted);margin-bottom:2px;}
+.result-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;line-height:1.1;margin-bottom:8px;}
+.result-meta{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.result-year{color:var(--muted);font-size:12px;}
+.result-special{font-size:11px;color:var(--accent2);}
+.result-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.btn-tidal{background:#00FECD;color:#000;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1.5px;padding:13px 26px;border-radius:10px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:opacity .2s;}
+.btn-tidal:hover{opacity:.85;}.btn-youtube{background:#FF0000;color:#fff;font-family:"Bebas Neue",sans-serif;font-size:15px;letter-spacing:1.5px;padding:13px 26px;border-radius:10px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:opacity .2s;}.btn-youtube:hover{opacity:.85;}
+.btn-again{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1.5px;padding:13px 26px;border-radius:10px;cursor:pointer;transition:all .2s;}
+.btn-again:hover{border-color:var(--accent);color:var(--accent);}
+.result-tracks{margin-top:14px;text-align:left;border-top:1px solid var(--border);padding-top:12px;max-height:160px;overflow-y:auto;}
+.result-track-row{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.result-track-row:last-child{border-bottom:none;}
+.rt-num{color:var(--muted);min-width:20px;text-align:right;}
+.rt-dur{color:var(--muted);white-space:nowrap;}
+
+/* COLORED VINYL TAB */
+.colored-view{display:none;padding-bottom:60px;}
+.colored-view.active{display:block;}
+.colored-header-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;position:sticky;top:41px;z-index:100;display:flex;align-items:center;gap:10px;}
+.colored-search-wrap{position:relative;flex:1;}
+.colored-search-wrap input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px 7px 32px;border-radius:8px;font-family:inherit;font-size:13px;outline:none;}
+.colored-search-wrap input:focus{border-color:var(--accent);}
+.colored-count{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:13px;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.colored-row{display:flex;align-items:flex-start;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+.colored-row:hover{background:var(--surface);}
+.vinyl-dot{width:36px;height:36px;border-radius:50%;flex-shrink:0;border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);}
+.colored-info{flex:1;min-width:0;}
+.colored-artist{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.5px;}
+.colored-title{font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.colored-meta{display:flex;gap:6px;align-items:center;margin-top:3px;flex-wrap:wrap;}
+.color-label{font-size:11px;color:var(--accent2);font-weight:500;}
+.colored-year{font-size:11px;color:var(--muted);}
+
+/* CONCERTS VIEW */
+.concerts-view{display:none;padding-bottom:60px;}
+.concerts-view.active{display:block;}
+.concert-header-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;position:sticky;top:41px;z-index:100;display:flex;align-items:center;gap:10px;}
+.concert-search-wrap{position:relative;flex:1;}
+.concert-search-wrap input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px 7px 32px;border-radius:8px;font-family:inherit;font-size:13px;outline:none;}
+.concert-search-wrap input:focus{border-color:var(--accent);}
+.concert-count-badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:13px;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.year-group{border-bottom:2px solid var(--border);}
+.year-label{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:var(--accent);padding:10px 16px 4px;background:var(--bg);position:sticky;top:89px;z-index:80;}
+.concert-row{display:flex;align-items:flex-start;gap:12px;padding:9px 16px;border-top:1px solid var(--border);transition:background .1s;}
+.concert-row:hover{background:var(--surface);}
+.concert-date-col{text-align:center;min-width:38px;flex-shrink:0;}
+.concert-month{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);}
+.concert-day{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--text);line-height:1;}
+.concert-info{flex:1;}
+.concert-artist{font-weight:500;font-size:15px;}
+.concert-venue-txt{font-size:13px;color:var(--muted);margin-top:2px;}
+
+/* DETAIL */
+.detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;padding:16px;overflow-y:auto;}
+.detail-overlay.open{display:flex;align-items:flex-start;justify-content:center;}
+.detail-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:540px;overflow:hidden;position:relative;}
+.detail-close{position:absolute;top:12px;right:12px;background:var(--surface2);border:none;color:var(--muted);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+.detail-head{padding:16px 18px 12px;}
+.detail-cover{width:68px;height:68px;border-radius:6px;object-fit:cover;border:1px solid var(--border);float:left;margin:0 14px 10px 0;}
+.detail-artist-lbl{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;color:var(--muted);}
+.detail-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;line-height:1.1;margin:2px 0 7px;}
+.detail-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap;clear:both;}
+.detail-meta{padding:10px 18px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.meta-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px;}
+.meta-value{font-size:12px;}
+.detail-notes-wrap{padding:10px 18px;border-bottom:1px solid var(--border);}
+.detail-notes{font-size:12px;color:var(--muted);line-height:1.6;max-height:110px;overflow-y:auto;}
+.tracklist-wrap{padding:0 0 6px;}
+.disc-header{padding:9px 18px 5px;font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;color:var(--muted);border-top:1px solid var(--border);}
+table.tracks{width:100%;border-collapse:collapse;}
+table.tracks td{padding:7px 18px;font-size:13px;border-bottom:1px solid var(--border);}
+table.tracks tr:last-child td{border-bottom:none;}
+table.tracks tr:hover td{background:var(--surface2);}
+.track-num{color:var(--muted);width:28px;text-align:right;padding-right:10px;}
+.track-dur{color:var(--muted);text-align:right;white-space:nowrap;padding-left:8px;}
+.empty{text-align:center;color:var(--muted);padding:50px 20px;font-size:13px;}
+.empty-icon{font-size:32px;margin-bottom:10px;}
+.load-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:1000;transition:opacity .3s;}
+.load-overlay.hidden{opacity:0;pointer-events:none;}
+.load-logo{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:var(--accent);}
+.load-spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:load-spin 0.8s linear infinite;}
+@keyframes load-spin{to{transform:rotate(360deg);}}
+.load-text{font-size:13px;color:var(--muted);}
+.load-text.error{color:var(--live);max-width:320px;text-align:center;}
+.load-retry{background:var(--accent);color:#f4ede0;border:none;padding:9px 20px;border-radius:8px;font-family:inherit;font-size:14px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="load-overlay" id="loadOverlay">
+  <div class="load-logo">PatCollection</div>
+  <div class="load-spinner" id="loadSpinner"></div>
+  <div class="load-text" id="loadText">Sammlung wird geladen…</div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" id="tabCollection" onclick="switchTab('collection')">🎵 Sammlung</button>
+  <button class="tab-btn" id="tabRandom" onclick="switchTab('random')">🎲 Zufall</button>
+  <button class="tab-btn" id="tabColored" onclick="switchTab('colored')">⚫ Vinyl</button>
+  <button class="tab-btn" id="tabConcerts" onclick="switchTab('concerts')">🎤 Konzerte</button>
+  <button class="tab-btn" id="tabAdd" onclick="switchTab('add')">➕ Neu</button>
+</div>
+
+<!-- COLLECTION -->
+<div id="viewCollection">
+  <div class="coll-header">
+    <div class="header-top">
+      <div class="logo">PatCollection</div>
+      <div class="count-badge" id="countBadge">2337</div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Suche Künstler, Album, Song…" autocomplete="off">
+      </div>
+    </div>
+    <div class="filters" id="filterBar">
+      <button class="filter-btn active" data-fmt="all">Alle</button>
+      <div class="filter-sep"></div>
+      <button class="filter-btn" data-fmt="Vinyl LP">Vinyl LP</button>
+      <button class="filter-btn" data-fmt="Vinyl Single">Single</button>
+      <button class="filter-btn" data-fmt="CD">CD</button>
+      <button class="filter-btn" data-fmt="DVD">DVD</button>
+      <button class="filter-btn" data-fmt="Box Set">Box</button>
+      <div class="filter-sep"></div>
+      <button class="filter-btn" data-special="1">★ Speziell</button>
+      <button class="filter-btn" data-live="1">🎤 Live</button>
+      <button class="filter-btn" data-seen="1">✓ Hab ich gesehen</button>
+      <div class="filter-sep"></div>
+      <select class="sort-sel" id="sortSel">
+        <option value="alpha">A–Z</option>
+        <option value="year">Jahr ↓</option>
+        <option value="yearasc">Jahr ↑</option>
+        <option value="format">Format</option>
+      </select>
+    </div>
+  </div>
+  <div class="alpha-bar" id="alphaBar"></div>
+  <main id="mainList"></main>
+</div>
+
+<!-- RANDOM -->
+<div id="viewRandom" class="random-view">
+  <p class="random-hint">Vinyl, CD, Box, Maxi-Singles — dreh die Scheibe</p>
+  <div class="vinyl-wrap" onclick="spinVinyl()">
+    <div class="vinyl-record" id="vinylRecord">
+      <div class="vinyl-shine"></div>
+      <div class="vinyl-label">
+        <div class="vinyl-label-text" id="vinylLabelText">PAT<br>COLL.</div>
+      </div>
+    </div>
+    <button class="vinyl-spinbtn" id="spinBtn">▶ ZUFALLSPLATTE</button>
+  </div>
+  <div class="result-card" id="resultCard">
+    <div class="result-cover-wrap" id="resultCoverWrap"></div>
+    <div class="result-artist" id="resultArtist"></div>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-meta" id="resultMeta"></div>
+    <div class="result-actions">
+      <a id="btnTidal" class="btn-tidal" href="#" target="_blank">▶ Auf Tidal hören</a>
+      <a id="btnYoutube" class="btn-youtube" href="#" target="_blank">▶ YouTube Music</a><button class="btn-again" onclick="spinVinyl()">↺ Nochmal</button>
+    </div>
+    <div class="result-tracks" id="resultTracks"></div>
+  </div>
+</div>
+
+<!-- COLORED VINYL -->
+<div id="viewColored" class="colored-view">
+  <div class="colored-header-bar">
+    <div class="colored-search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="coloredSearch" placeholder="Suche Künstler, Album, Farbe…" autocomplete="off">
+    </div>
+    <div class="colored-count" id="coloredCount">72 Platten</div>
+  </div>
+  <div id="coloredList"></div>
+</div>
+
+<!-- CONCERTS -->
+<div id="viewConcerts" class="concerts-view">
+  <div class="concert-header-bar">
+    <div class="concert-search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="concertSearch" placeholder="Suche Künstler, Venue…" autocomplete="off">
+    </div>
+    <div class="concert-count-badge" id="concertCount">157 Shows</div>
+  </div>
+  <div id="concertList"></div>
+</div>
+
+
+<!-- ADD NEW ENTRY -->
+<div id="viewAdd" class="add-view">
+
+  <!-- Discogs Token -->
+  <div class="add-section">
+    <div class="add-section-title">⚙️ Discogs API-Token</div>
+    <div class="add-token-wrap">
+      <input type="password" id="discogsTokenInput" placeholder="Personal Access Token…">
+      <button class="btn-save-token" onclick="saveToken()">Speichern</button>
+    </div>
+    <div class="token-status" id="tokenStatus"></div>
+  </div>
+
+  <!-- Barcode Scanner -->
+  <div class="add-section">
+    <div class="add-section-title">📷 Barcode Scannen</div>
+    <div class="scan-area" id="scanArea" style="display:none">
+      <video id="scanVideo" playsinline autoplay muted></video>
+      <div class="scan-crosshair"></div>
+    </div>
+    <button class="btn-scan" id="btnStartScan" onclick="startScan()">📷 Kamera starten</button>
+    <div class="scan-result-info" id="scanInfo">Barcode unter die Kamera halten</div>
+    <div class="add-section-title" style="margin-top:12px">oder manuell eingeben</div>
+    <div class="barcode-manual-wrap">
+      <input type="number" id="barcodeManual" placeholder="Barcode / EAN eingeben…">
+      <button class="btn-lookup" onclick="lookupBarcode(document.getElementById('barcodeManual').value)">Suchen</button>
+    </div>
+  </div>
+
+  <!-- Discogs Preview -->
+  <div class="discogs-preview" id="discogsPreview">
+    <img id="discogsImg" src="">
+    <div class="discogs-preview-info">
+      <div class="discogs-preview-title" id="discogsPreviewTitle"></div>
+      <div class="discogs-preview-sub" id="discogsPreviewSub"></div>
+    </div>
+  </div>
+
+  <!-- Entry Form -->
+  <div class="add-form" id="addForm">
+    <div class="add-section">
+      <div class="add-section-title">✏️ Eintrag</div>
+      <div class="form-row">
+        <div class="form-label">Künstler</div>
+        <input class="form-input" id="fArtist" type="text" placeholder="Künstlername…">
+      </div>
+      <div class="form-row">
+        <div class="form-label">Album / Titel</div>
+        <input class="form-input" id="fTitle" type="text" placeholder="Albumtitel…">
+      </div>
+      <div class="form-row-2">
+        <div>
+          <div class="form-label">Jahr</div>
+          <input class="form-input" id="fYear" type="number" placeholder="z.B. 1982">
+        </div>
+        <div>
+          <div class="form-label">Format</div>
+          <select class="form-input" id="fFormat">
+            <option value="Vinyl LP">Vinyl LP</option>
+            <option value="CD">CD</option>
+            <option value="Vinyl Maxi-Single">Vinyl Maxi-Single</option>
+            <option value="Vinyl Single">Vinyl Single</option>
+            <option value="CD Single">CD Single</option>
+            <option value="Box Set">Box Set</option>
+            <option value="SACD">SACD</option>
+            <option value="DVD">DVD</option>
+            <option value="Blu-ray">Blu-ray</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Speziell (Farbe, Limited…)</div>
+        <input class="form-input" id="fSpecial" type="text" placeholder="z.B. Red · Limited to 500">
+      </div>
+      <div class="form-row">
+        <div class="form-label">Cover</div>
+        <div class="cover-upload-wrap">
+          <div class="cover-upload-preview" id="coverPreviewBox">♪</div>
+          <label class="btn-upload-cover" for="fCoverFile">📁 Bild hochladen</label>
+          <input type="file" id="fCoverFile" accept="image/*" onchange="handleCoverUpload(event)">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Notizen</div>
+        <input class="form-input" id="fNotes" type="text" placeholder="Optionale Notizen…">
+      </div>
+      <button class="btn-add-confirm" onclick="saveNewEntry()">✓ In Sammlung aufnehmen</button>
+    </div>
+  </div>
+  <!-- Cover Import -->
+  <div class="add-section cover-import-section">
+    <div class="add-section-title">🖼 Album Cover von Discogs laden</div>
+    <div class="progress-label">
+      <span id="coverProgressText">Bereit</span>
+      <span id="coverProgressPct">0%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="coverProgressBar"></div></div>
+    <button class="btn-cover-import" id="btnCoverImport" onclick="startCoverImport()">🖼 Alle Cover laden</button>
+    <button class="btn-cover-stop" id="btnCoverStop" onclick="stopCoverImport()">⏹ Stoppen</button>
+    <div class="cover-import-log" id="coverLog">Warte auf Start…</div>
+  </div>
+
+  <!-- Export -->
+  <div class="add-section">
+    <div class="add-section-title">💾 Sammlung exportieren</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Sichere deine Sammlung inkl. aller neuen Einträge als Datei.</p>
+    <div class="export-options">
+      <button class="btn-export-fmt" onclick="exportCollection('json')">⬇ JSON</button>
+      <button class="btn-export-fmt" onclick="exportCollection('csv')">⬇ CSV</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- NEW ENTRIES -->
+<div id="viewNewEntries" class="new-entries-view">
+  <div class="new-entries-header">
+    <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;flex:1">Neu hinzugefügt</span>
+    <div class="new-entries-count" id="newEntriesCount">0 Einträge</div>
+  </div>
+  <div id="newEntriesList"></div>
+</div>
+
+<div class="add-toast" id="addToast">✓ Gespeichert!</div>
+
+<!-- DETAIL -->
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail-card">
+    <button class="detail-close" id="detailClose">✕</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- EDIT OVERLAY -->
+<div class="edit-overlay" id="editOverlay">
+  <div class="edit-card">
+    <div class="edit-card-head">
+      <span class="edit-card-title">Album bearbeiten</span>
+      <button class="edit-close" onclick="closeEdit()">✕</button>
+    </div>
+    <div class="edit-body">
+      <div class="edit-cover-row">
+        <div class="edit-cover-img" id="editCoverPreview">♪</div>
+        <div class="edit-cover-actions">
+          <label class="btn-edit-cover" for="editCoverFile">📁 Cover ersetzen</label>
+          <input type="file" id="editCoverFile" accept="image/*" onchange="handleEditCover(event)">
+          <button class="btn-edit-cover" onclick="fetchDiscogscover()">🔍 Von Discogs laden</button>
+          <button class="btn-edit-cover" onclick="clearEditCover()">✕ Cover entfernen</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Künstler</div>
+        <input class="form-input" id="editArtist" type="text">
+      </div>
+      <div class="form-row">
+        <div class="form-label">Titel</div>
+        <input class="form-input" id="editTitle" type="text">
+      </div>
+      <div class="form-row-2">
+        <div>
+          <div class="form-label">Jahr</div>
+          <input class="form-input" id="editYear" type="number">
+        </div>
+        <div>
+          <div class="form-label">Format</div>
+          <select class="form-input" id="editFormat">
+            <option>Vinyl LP</option>
+            <option>CD</option>
+            <option>Vinyl Maxi-Single</option>
+            <option>Vinyl Single</option>
+            <option>CD Single</option>
+            <option>Box Set</option>
+            <option>SACD</option>
+            <option>DVD</option>
+            <option>Blu-ray</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Speziell</div>
+        <input class="form-input" id="editSpecial" type="text">
+      </div>
+      <div class="form-row">
+        <div class="form-label">Notizen</div>
+        <textarea class="form-input" id="editNotes" rows="3" style="resize:vertical"></textarea>
+      </div>
+      <div class="edit-actions">
+        <button class="btn-edit-save" onclick="saveEdit()">✓ Speichern</button>
+        <button class="btn-edit-delete" onclick="deleteEntry()">🗑 Löschen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const RAW=[];
+const CONCERTS=[];
+
+// ── SUPABASE ──────────────────────────────────────────
+const SUPABASE_URL='https://igvmmojnzoapmveskivi.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlndm1tb2puem9hcG12ZXNraXZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1ODM5NDgsImV4cCI6MjEwMzE1OTk0OH0.Whxc1X0kpqR9OMEGCgxrbBuR3xQUF4ycw2NApNeelaU';
+
+async function sbFetch(path){
+  const resp=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
+  if(!resp.ok)throw new Error('Supabase '+resp.status+': '+await resp.text());
+  return resp.json();
+}
+
+async function sbFetchAll(path){
+  const out=[];
+  let offset=0;
+  const page=1000;
+  while(true){
+    const sep=path.includes('?')?'&':'?';
+    const chunk=await sbFetch(`${path}${sep}limit=${page}&offset=${offset}`);
+    out.push(...chunk);
+    if(chunk.length<page)break;
+    offset+=page;
+  }
+  return out;
+}
+
+async function loadCollectionFromSupabase(){
+  const albumsSelect='title,format,year,special_edition,notes,is_live,cover_url,label_nr,discs,upc,'+
+    'artists(name,name_sort),'+
+    'album_discs(disc_number,disc_title,album_tracks(position,title,duration))';
+  const query='albums?select='+encodeURIComponent(albumsSelect)+
+    '&album_discs.order=disc_number.asc'+
+    '&album_discs.album_tracks.order=id.asc';
+  const rows=await sbFetchAll(query);
+  for(const r of rows){
+    RAW.push({
+      artist:r.artists.name,
+      artistSort:r.artists.name_sort,
+      title:r.title,
+      format:r.format,
+      year:r.year?String(r.year):'',
+      special:r.special_edition||'',
+      notes:r.notes||'',
+      isLive:r.is_live,
+      cover:r.cover_url||'',
+      labelNr:r.label_nr||'',
+      discs:r.discs,
+      upc:r.upc||'',
+      tracklist:(r.album_discs||[]).map(d=>({
+        title:d.disc_title||'',
+        tracks:(d.album_tracks||[]).map(t=>({pos:t.position,title:t.title,dur:t.duration||''}))
+      }))
+    });
+  }
+
+  const concertRows=await sbFetchAll('concerts?select=date,artist_name,venue&order=date.desc');
+  for(const c of concertRows){
+    CONCERTS.push({date:c.date,artist:c.artist_name,venue:c.venue});
+  }
+}
+
+const CONCERT_MAP=new Map();
+function buildConcertMap(){
+  CONCERT_MAP.clear();
+  for(const c of CONCERTS){const k=c.artist.toLowerCase().trim();if(!CONCERT_MAP.has(k))CONCERT_MAP.set(k,[]);CONCERT_MAP.get(k).push(c);}
+}
+function getConcertsForArtist(n){return CONCERT_MAP.get(n.toLowerCase().trim())||[];}
+
+// ── TABS ──────────────────────────────────────────────
+const TABS=['collection','random','colored','concerts','add','newentries'];
+function switchTab(tab){
+  document.getElementById('viewCollection').style.display=tab==='collection'?'':'none';
+  document.getElementById('viewRandom').classList.toggle('active',tab==='random');
+  document.getElementById('viewColored').classList.toggle('active',tab==='colored');
+  document.getElementById('viewConcerts').classList.toggle('active',tab==='concerts');
+  document.getElementById('viewAdd').classList.toggle('active',tab==='add');
+  document.getElementById('viewNewEntries').classList.toggle('active',tab==='newentries');
+  ['collection','random','colored','concerts','add'].forEach(t=>{
+    const el=document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(el)el.classList.toggle('active',t===tab);
+  });
+  if(tab==='colored')renderColored();
+  if(tab==='concerts')renderConcerts();
+  if(tab==='add')initAddTab();
+  if(tab==='newentries')renderNewEntries();
+}
+
+// ── RANDOM VINYL ──────────────────────────────────────
+let isSpinning=false;
+function spinVinyl(){
+  if(isSpinning)return;
+  isSpinning=true;
+  const record=document.getElementById('vinylRecord');
+  const card=document.getElementById('resultCard');
+  const lbl=document.getElementById('vinylLabelText');
+  card.classList.remove('visible');
+  record.classList.remove('spin-out');
+  record.classList.add('spinning');
+  lbl.textContent='...';
+  setTimeout(()=>{
+    record.classList.remove('spinning');
+    record.classList.add('spin-out');
+    const ALBUM_FORMATS=RAW.filter(a=>{const f=(a.format||'').toLowerCase();return f==='cd'||f.includes('vinyl lp')||f.includes('box')||f.includes('sacd')||f.includes('download')||f.includes('cd &')||f.includes('maxi');});const pick=ALBUM_FORMATS[Math.floor(Math.random()*ALBUM_FORMATS.length)];
+    showResult(pick);
+    lbl.innerHTML=pick.artist.split(' ').slice(0,2).join('<br>').toUpperCase().slice(0,12);
+    setTimeout(()=>{
+      record.classList.remove('spin-out');
+      isSpinning=false;
+    },650);
+  },1800);
+}
+
+function showResult(a){
+  // Cover
+  const cw=document.getElementById('resultCoverWrap');
+  if(a.cover){cw.innerHTML=`<img src="${a.cover}" onerror="this.parentElement.innerHTML='<div class=result-cover-placeholder>♪</div>'">`;}
+  else{cw.innerHTML='<div class="result-cover-placeholder">♪</div>';}
+  document.getElementById('resultArtist').textContent=a.artist;
+  document.getElementById('resultTitle').textContent=a.title;
+  // Meta
+  let meta=`<span class="result-year">${a.year||'—'}</span>`;
+  if(a.special)meta+=`<span class="result-special">✦ ${escHtml(a.special)}</span>`;
+  document.getElementById('resultMeta').innerHTML=meta;
+  // Tidal link – search query
+  const tidalQ=encodeURIComponent(a.artist+' '+a.title);
+  document.getElementById('btnTidal').href=`https://tidal.com/search/albums?q=${tidalQ}`;const ytQ=encodeURIComponent(a.artist+' '+a.title);document.getElementById('btnYoutube').href=`https://music.youtube.com/search?q=${ytQ}`;
+  // Tracks (first disc only)
+  const tracksEl=document.getElementById('resultTracks');
+  if(a.tracklist&&a.tracklist[0]&&a.tracklist[0].tracks.length){
+    let th='';
+    for(const t of a.tracklist[0].tracks){
+      th+=`<div class="result-track-row"><span class="rt-num">${escHtml(t.pos)}</span><span style="flex:1">${escHtml(t.title)}</span><span class="rt-dur">${t.dur||''}</span></div>`;
+    }
+    tracksEl.innerHTML=th;
+  } else {tracksEl.innerHTML='';}
+  // Show card
+  setTimeout(()=>document.getElementById('resultCard').classList.add('visible'),200);
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function fmtGroup(f){if(!f)return'other';const fl=f.toLowerCase();if(fl.includes('vinyl lp'))return'Vinyl LP';if(fl.includes('vinyl maxi')||fl.includes('vinyl single')||fl.includes('cd single'))return'Vinyl Single';if(fl==='cd'||fl.includes('cd &')||fl.includes('sacd')||fl.includes('& cd')||fl.includes('blu-ray audio')||fl.includes('download'))return'CD';if(fl.includes('dvd')||fl.includes('blu-ray'))return'DVD';if(fl.includes('box'))return'Box Set';return'other';}
+function fmtCls(g){return{'Vinyl LP':'vinyl','Vinyl Single':'single','CD':'cd','DVD':'dvd','Box Set':'box'}[g]||'other';}
+function fmtShort(f){if(!f)return f;const fl=f.toLowerCase();if(fl==='vinyl lp')return'Vinyl LP';if(fl==='vinyl single')return'7"';if(fl==='vinyl maxi-single')return'12"';if(fl==='cd single')return'CD-S';if(fl==='cd & dvd')return'CD+DVD';if(fl==='cd & blu-ray')return'CD+BRD';return f;}
+function escHtml(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+const MONTHS_SHORT=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+function formatConcertDate(d){const p=d.split('-');return`${parseInt(p[2])}. ${MONTHS_SHORT[parseInt(p[1])-1]} ${p[0]}`;}
+function groupByArtist(albums){const map=new Map();for(const a of albums){if(!map.has(a.artist))map.set(a.artist,{artist:a.artist,artistSort:a.artistSort,albums:[],hasLive:false});const g=map.get(a.artist);g.albums.push(a);if(a.isLive)g.hasLive=true;}return Array.from(map.values());}
+
+// Color helpers
+const COLOR_MAP={red:'#e84747',orange:'#e87d47',yellow:'#e8c547',gold:'#c8a030',blue:'#4785e8','light blue':'#7bb8f0',lightblue:'#7bb8f0',purple:'#9b4fe8',violet:'#a04fe8',pink:'#e84fa0',green:'#47c47a',teal:'#47c4b4',turquoise:'#47c4c4',white:'#d0d0d0',clear:'#aaaaaa',crystal:'#aaaaaa',translucent:'#aaaaaa',smoke:'#888888',grey:'#888888',gray:'#888888',silver:'#a0a8b0',black:'#444444',brown:'#8b6040',cream:'#d4c49a',olive:'#8b9040',marbled:'#9b7fb0',splatter:'#c47ae8',magenta:'#e847c4'};
+function vinylColor(s){if(!s)return'#555';const sl=s.toLowerCase();for(const[k,v]of Object.entries(COLOR_MAP)){if(sl.includes(k))return v;}return'#9b8fff';}
+function colorLabel(s){if(!s)return'';const sl=s.toLowerCase();for(const k of Object.keys(COLOR_MAP)){if(sl.includes(k))return k.charAt(0).toUpperCase()+k.slice(1);}return s.split('·')[0].trim();}
+function isColoredVinyl(a){if(!a.special)return false;const sl=a.special.toLowerCase();const fmt=(a.format||'').toLowerCase();if(!fmt.includes('vinyl'))return false;for(const k of Object.keys(COLOR_MAP)){if(sl.includes(k))return true;}return false;}
+
+let activeFormat='all',activeSpecial=false,activeLive=false,activeSeen=false,activeSort='alpha',searchQuery='';
+function filterAndRender(){
+  let data=RAW;
+  if(searchQuery){const q=searchQuery.toLowerCase();data=data.filter(a=>a.artist.toLowerCase().includes(q)||a.title.toLowerCase().includes(q)||a.tracklist.some(d=>d.tracks.some(t=>t.title.toLowerCase().includes(q))));}
+  if(activeFormat!=='all'){if(activeFormat==='Vinyl Single')data=data.filter(a=>{const fl=(a.format||'').toLowerCase();return fl.includes('vinyl single')||fl.includes('vinyl maxi')||fl.includes('cd single');});else data=data.filter(a=>fmtGroup(a.format)===activeFormat);}
+  if(activeSpecial)data=data.filter(a=>a.special&&a.special.trim());
+  if(activeLive)data=data.filter(a=>a.isLive);
+  if(activeSeen)data=data.filter(a=>getConcertsForArtist(a.artist).length>0);
+  if(activeSort==='alpha')data=data.slice().sort((a,b)=>(a.artistSort||a.artist).localeCompare(b.artistSort||b.artist,'de')||a.title.localeCompare(b.title,'de'));
+  else if(activeSort==='year')data=data.slice().sort((a,b)=>(b.year||'0').localeCompare(a.year||'0')||(a.artistSort||a.artist).localeCompare(b.artistSort||b.artist,'de'));
+  else if(activeSort==='yearasc')data=data.slice().sort((a,b)=>(a.year||'9999').localeCompare(b.year||'9999')||(a.artistSort||a.artist).localeCompare(b.artistSort||b.artist,'de'));
+  else if(activeSort==='format')data=data.slice().sort((a,b)=>(a.format||'').localeCompare(b.format||'')||(a.artistSort||a.artist).localeCompare(b.artistSort||b.artist,'de'));
+  document.getElementById('countBadge').textContent=data.length+' Einträge';
+  const groups=groupByArtist(data);
+  renderAlphaBar(new Set(groups.map(g=>{const c=(g.artistSort||g.artist)[0].toUpperCase();return/[A-Z]/.test(c)?c:'#';})));
+  renderList(groups);
+}
+function renderAlphaBar(letters){document.getElementById('alphaBar').innerHTML='#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l=>`<button class="alpha-btn${letters.has(l)?' has-data':''}" onclick="scrollToLetter('${l}')">${l}</button>`).join('');}
+function scrollToLetter(l){const el=document.querySelector(`[data-letter="${l}"]`);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
+function renderList(groups){
+  const list=document.getElementById('mainList');
+  if(!groups.length){list.innerHTML='<div class="empty"><div class="empty-icon">🎵</div>Keine Treffer.</div>';return;}
+  let lastLetter=null,html='';
+  for(const g of groups){
+    const s=g.artistSort||g.artist;const c=s[0].toUpperCase();const letter=/[A-Z]/.test(c)?c:'#';
+    const la=letter!==lastLetter?` data-letter="${letter}"`:'';lastLetter=letter;
+    const cnt=g.albums.length===1?'1 Album':g.albums.length+' Alben';
+    const concerts=getConcertsForArtist(g.artist);const hasSeen=concerts.length>0;
+    html+=`<div class="artist-block"${la}><div class="artist-header" onclick="toggleArtist(this)"><span class="artist-name">${escHtml(g.artist)}</span>${hasSeen?`<span class="badge-seen">✓ ${concerts.length}×</span>`:''}<span class="album-count">${cnt}</span><span class="chevron">▶</span></div><div class="album-list">`;
+    for(let i=0;i<g.albums.length;i++){
+      const a=g.albums[i];const fg=fmtGroup(a.format);const fc=fmtCls(fg);
+      const coverHtml=a.cover?`<img class="album-cover" src="${a.cover}" loading="lazy" onerror="this.style.display='none'">`:`<div class="cover-placeholder">♪</div>`;
+      const sp=a.special?`<span class="special-tag" title="${escHtml(a.special)}">✦ ${escHtml(a.special)}</span>`:'';
+      html+=`<div class="album-row" onclick="showDetail(${i},'${escHtml(g.artist).replace(/'/g,"\\'")}')">${coverHtml}<div class="album-info"><div class="album-title">${escHtml(a.title)}</div><div class="album-meta"><span class="album-year">${a.year||'—'}</span><span class="fmt-badge fmt-${fc}">${escHtml(fmtShort(a.format))}</span>${sp}</div></div></div>`;
+    }
+    if(hasSeen){
+      html+=`<div class="seen-live-block"><div class="seen-live-title">🎤 Gesehen live – ${concerts.length} Konzert${concerts.length>1?'e':''}</div>`;
+      for(const c of concerts)html+=`<div class="seen-concert-row"><span class="seen-date">${formatConcertDate(c.date)}</span><span class="seen-venue">${escHtml(c.venue)}</span></div>`;
+      html+=`</div>`;
+    }
+    html+=`</div></div>`;
+  }
+  list.innerHTML=html;window._groupData=groups;
+}
+function toggleArtist(h){h.closest('.artist-block').classList.toggle('open');}
+function showDetail(idx,artistName){
+  const group=window._groupData.find(g=>g.artist===artistName);if(!group)return;
+  const a=group.albums[idx];if(!a)return;
+  const fg=fmtGroup(a.format);const fc=fmtCls(fg);
+  let html='<div class="detail-head">';
+  if(a.cover)html+=`<img class="detail-cover" src="${a.cover}" onerror="this.remove()">`;
+  html+=`<div class="detail-artist-lbl">${escHtml(a.artist)}</div><div class="detail-title">${escHtml(a.title)}</div>`;
+  html+=`<div class="detail-badges"><span class="album-year" style="font-size:12px">${a.year||'—'}</span><span class="fmt-badge fmt-${fc}">${escHtml(a.format)}</span>${a.isLive?'<span class="badge-live">Live</span>':''}${a.special?`<span class="special-tag" style="max-width:none">✦ ${escHtml(a.special)}</span>`:''}</div></div>`;
+  const mi=[];if(a.labelNr)mi.push(['Label-Nr.',a.labelNr]);if(a.discs>1)mi.push(['Discs',a.discs]);if(a.upc)mi.push(['Barcode',a.upc]);
+  if(mi.length){html+='<div class="detail-meta">';for(const[k,v]of mi)html+=`<div><div class="meta-label">${k}</div><div class="meta-value">${escHtml(String(v))}</div></div>`;html+='</div>';}
+  if(a.notes)html+=`<div class="detail-notes-wrap"><div class="meta-label" style="margin-bottom:5px">Notizen</div><div class="detail-notes">${escHtml(a.notes)}${a.notes.length>=400?'…':''}</div></div>`;
+  if(a.tracklist&&a.tracklist.length){html+='<div class="tracklist-wrap">';for(const disc of a.tracklist){if(a.tracklist.length>1)html+=`<div class="disc-header">${escHtml(disc.title)||'Disc'}</div>`;html+='<table class="tracks">';for(const t of disc.tracks)html+=`<tr><td class="track-num">${escHtml(t.pos)}</td><td>${escHtml(t.title)}</td><td class="track-dur">${t.dur||''}</td></tr>`;html+='</table>';}html+='</div>';}
+  document.getElementById('detailContent').innerHTML=html;
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+// Colored vinyl
+let coloredQuery='';
+function renderColored(){
+  let data=RAW.filter(isColoredVinyl);
+  if(coloredQuery){const q=coloredQuery.toLowerCase();data=data.filter(a=>a.artist.toLowerCase().includes(q)||a.title.toLowerCase().includes(q)||a.special.toLowerCase().includes(q));}
+  data.sort((a,b)=>(a.artistSort||a.artist).localeCompare(b.artistSort||b.artist,'de'));
+  document.getElementById('coloredCount').textContent=data.length+' Platten';
+  const list=document.getElementById('coloredList');
+  if(!data.length){list.innerHTML='<div class="empty"><div class="empty-icon">🎨</div>Keine Treffer.</div>';return;}
+  let html='';
+  for(let i=0;i<data.length;i++){
+    const a=data[i];const col=vinylColor(a.special);const lbl=colorLabel(a.special);
+    const extra=(a.special||'').split('·').slice(1).map(s=>s.trim()).filter(Boolean).join(' · ');
+    html+=`<div class="colored-row" onclick="showDetailFromColored(${i})"><div class="vinyl-dot" style="background:${col}">${lbl.slice(0,2).toUpperCase()}</div><div class="colored-info"><div class="colored-artist">${escHtml(a.artist)}</div><div class="colored-title">${escHtml(a.title)}</div><div class="colored-meta"><span class="color-label">⬤ ${escHtml(lbl)}</span>${extra?`<span class="special-tag">${escHtml(extra)}</span>`:''}<span class="colored-year">${a.year||'—'}</span></div></div></div>`;
+  }
+  list.innerHTML=html;window._coloredData=data;
+}
+function showDetailFromColored(idx){
+  const a=window._coloredData[idx];if(!a)return;
+  if(!window._groupData)window._groupData=[];
+  const existing=window._groupData.find(g=>g.artist===a.artist);
+  if(!existing)window._groupData.push({artist:a.artist,artistSort:a.artistSort,albums:[a],hasLive:a.isLive});
+  showDetail(existing?existing.albums.indexOf(a):0,a.artist);
+}
+
+// Concerts
+let concertQuery='';
+function renderConcerts(){
+  let data=CONCERTS;
+  if(concertQuery){const q=concertQuery.toLowerCase();data=data.filter(c=>c.artist.toLowerCase().includes(q)||c.venue.toLowerCase().includes(q));}
+  document.getElementById('concertCount').textContent=data.length+' Shows';
+  const list=document.getElementById('concertList');
+  if(!data.length){list.innerHTML='<div class="empty"><div class="empty-icon">🎤</div>Keine Treffer.</div>';return;}
+  const byYear=new Map();
+  for(const c of data){const y=c.date.slice(0,4);if(!byYear.has(y))byYear.set(y,[]);byYear.get(y).push(c);}
+  let html='';
+  for(const[year,shows] of byYear){
+    html+=`<div class="year-group"><div class="year-label">${year}</div>`;
+    for(const c of shows){const p=c.date.split('-');html+=`<div class="concert-row"><div class="concert-date-col"><div class="concert-month">${MONTHS_SHORT[parseInt(p[1])-1]}</div><div class="concert-day">${parseInt(p[2])}</div></div><div class="concert-info"><div class="concert-artist">${escHtml(c.artist)}</div><div class="concert-venue-txt">${escHtml(c.venue)}</div></div></div>`;}
+    html+=`</div>`;
+  }
+  list.innerHTML=html;
+}
+
+// Events
+document.getElementById('searchInput').addEventListener('input',e=>{searchQuery=e.target.value.trim();filterAndRender();});
+document.getElementById('filterBar').addEventListener('click',e=>{
+  const btn=e.target.closest('.filter-btn');if(!btn)return;
+  if(btn.dataset.fmt){document.querySelectorAll('[data-fmt]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');activeFormat=btn.dataset.fmt;}
+  else if(btn.dataset.special){activeSpecial=!activeSpecial;btn.classList.toggle('active',activeSpecial);}
+  else if(btn.dataset.live){activeLive=!activeLive;btn.classList.toggle('active',activeLive);}
+  else if(btn.dataset.seen){activeSeen=!activeSeen;btn.classList.toggle('active',activeSeen);}
+  filterAndRender();
+});
+document.getElementById('sortSel').addEventListener('change',e=>{activeSort=e.target.value;filterAndRender();});
+document.getElementById('coloredSearch').addEventListener('input',e=>{coloredQuery=e.target.value.trim();renderColored();});
+document.getElementById('concertSearch').addEventListener('input',e=>{concertQuery=e.target.value.trim();renderConcerts();});
+document.getElementById('detailClose').addEventListener('click',()=>document.getElementById('detailOverlay').classList.remove('open'));
+document.getElementById('detailOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
+
+// ── EXPORT ────────────────────────────────────────────
+function exportCollection(fmt){
+  const saved = JSON.parse(localStorage.getItem('patNewEntries')||'[]');
+  const covers = JSON.parse(localStorage.getItem('patCovers')||'{}');
+
+  // Merge covers into all entries
+  const allData = RAW.map(a => {
+    const key = coverKey(a);
+    return {...a, cover: covers[key] || a.cover || ''};
+  });
+
+  let content, mime, ext;
+  if(fmt === 'json'){
+    content = JSON.stringify(allData, null, 2);
+    mime = 'application/json';
+    ext = 'json';
+  } else {
+    const headers = ['artist','title','year','format','special','notes','isLive','cover','upc','labelNr'];
+    const rows = allData.map(a => headers.map(h => {
+      const v = String(a[h]||'').replace(/"/g,'""');
+      return `"${v}"`;
+    }).join(','));
+    content = headers.join(',') + '\n' + rows.join('\n');
+    mime = 'text/csv';
+    ext = 'csv';
+  }
+
+  const blob = new Blob([content], {type: mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `PatCollection_${new Date().toISOString().slice(0,10)}.${ext}`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── EDIT ──────────────────────────────────────────────
+let editArtistName = '';
+let editAlbumIdx = -1;
+let editCoverDataUrl = '';
+
+function openEdit(artistName, albumIdx){
+  const group = window._groupData.find(g => g.artist === artistName);
+  if(!group) return;
+  const a = group.albums[albumIdx];
+  if(!a) return;
+
+  editArtistName = artistName;
+  editAlbumIdx = albumIdx;
+  editCoverDataUrl = '';
+
+  document.getElementById('editArtist').value = a.artist;
+  document.getElementById('editTitle').value = a.title;
+  document.getElementById('editYear').value = a.year||'';
+  document.getElementById('editSpecial').value = a.special||'';
+  document.getElementById('editNotes').value = a.notes||'';
+
+  const sel = document.getElementById('editFormat');
+  for(let i=0;i<sel.options.length;i++){
+    if(sel.options[i].value === a.format){sel.selectedIndex=i;break;}
+  }
+
+  const prev = document.getElementById('editCoverPreview');
+  const cover = a.cover || (JSON.parse(localStorage.getItem('patCovers')||'{}')[coverKey(a)]);
+  if(cover){prev.innerHTML=`<img src="${cover}">`;}
+  else{prev.innerHTML='♪';}
+
+  document.getElementById('editOverlay').classList.add('open');
+}
+
+function closeEdit(){
+  document.getElementById('editOverlay').classList.remove('open');
+  document.getElementById('editCoverFile').value='';
+}
+
+function handleEditCover(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    editCoverDataUrl = e.target.result;
+    document.getElementById('editCoverPreview').innerHTML = `<img src="${editCoverDataUrl}">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearEditCover(){
+  editCoverDataUrl = 'REMOVE';
+  document.getElementById('editCoverPreview').innerHTML = '♪';
+}
+
+async function fetchDiscogscover(){
+  if(!discogsToken){alert('Bitte zuerst Discogs-Token eingeben.');return;}
+  const artist = document.getElementById('editArtist').value;
+  const title = document.getElementById('editTitle').value;
+  try{
+    const url = `https://api.discogs.com/database/search?release_title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}&token=${discogsToken}&per_page=1&type=release`;
+    const resp = await fetch(url,{headers:{'User-Agent':'PatCollection/1.0'}});
+    const data = await resp.json();
+    if(data.results&&data.results[0]){
+      const img = data.results[0].cover_image||data.results[0].thumb||'';
+      if(img&&!img.includes('spacer')){
+        editCoverDataUrl = img;
+        document.getElementById('editCoverPreview').innerHTML=`<img src="${img}">`;
+      } else { alert('Kein Cover gefunden.'); }
+    } else { alert('Kein Ergebnis auf Discogs.'); }
+  }catch(e){alert('Fehler: '+e.message);}
+}
+
+function saveEdit(){
+  const group = window._groupData.find(g => g.artist === editArtistName);
+  if(!group) return;
+  const a = group.albums[editAlbumIdx];
+  if(!a) return;
+
+  a.artist = document.getElementById('editArtist').value.trim();
+  a.artistSort = a.artist;
+  a.title = document.getElementById('editTitle').value.trim();
+  a.year = document.getElementById('editYear').value.trim();
+  a.format = document.getElementById('editFormat').value;
+  a.special = document.getElementById('editSpecial').value.trim();
+  a.notes = document.getElementById('editNotes').value.trim();
+
+  // Handle cover
+  if(editCoverDataUrl === 'REMOVE'){
+    a.cover = '';
+    const covers = JSON.parse(localStorage.getItem('patCovers')||'{}');
+    delete covers[coverKey(a)];
+    localStorage.setItem('patCovers', JSON.stringify(covers));
+  } else if(editCoverDataUrl){
+    a.cover = editCoverDataUrl;
+    const covers = JSON.parse(localStorage.getItem('patCovers')||'{}');
+    covers[coverKey(a)] = editCoverDataUrl;
+    localStorage.setItem('patCovers', JSON.stringify(covers));
+  }
+
+  // If it was a new entry, update in localStorage too
+  const saved = JSON.parse(localStorage.getItem('patNewEntries')||'[]');
+  const sIdx = saved.findIndex(e => e.artist === editArtistName && e.title === a.title);
+  if(sIdx >= 0){ saved[sIdx] = {...a}; localStorage.setItem('patNewEntries', JSON.stringify(saved)); }
+
+  closeEdit();
+  filterAndRender();
+
+  const toast = document.getElementById('addToast');
+  toast.textContent = '✓ Gespeichert!';
+  toast.classList.add('show');
+  setTimeout(()=>toast.classList.remove('show'), 2000);
+}
+
+function deleteEntry(){
+  if(!confirm('Diesen Eintrag wirklich löschen?')) return;
+  const group = window._groupData.find(g => g.artist === editArtistName);
+  if(!group) return;
+  const a = group.albums[editAlbumIdx];
+
+  // Remove from RAW
+  const rIdx = RAW.indexOf(a);
+  if(rIdx >= 0) RAW.splice(rIdx, 1);
+
+  // Remove from localStorage if new entry
+  const saved = JSON.parse(localStorage.getItem('patNewEntries')||'[]');
+  const sIdx = saved.findIndex(e => e.artist === a.artist && e.title === a.title);
+  if(sIdx >= 0){ saved.splice(sIdx,1); localStorage.setItem('patNewEntries', JSON.stringify(saved)); }
+
+  closeEdit();
+  filterAndRender();
+}
+
+document.getElementById('editOverlay').addEventListener('click', e => {
+  if(e.target === e.currentTarget) closeEdit();
+});
+
+// ── ADD / SCAN ────────────────────────────────────────
+let scanStream=null;
+let scanInterval=null;
+let discogsToken=localStorage.getItem('discogsToken')||'';
+
+function initAddTab(){
+  const inp=document.getElementById('discogsTokenInput');
+  if(discogsToken){inp.value=discogsToken;showTokenStatus(true);}
+  else showTokenStatus(false);
+}
+
+function saveToken(){
+  const v=document.getElementById('discogsTokenInput').value.trim();
+  if(!v)return;
+  localStorage.setItem('discogsToken',v);
+  discogsToken=v;
+  showTokenStatus(true);
+}
+
+function showTokenStatus(ok){
+  const el=document.getElementById('tokenStatus');
+  el.className='token-status '+(ok?'token-ok':'token-missing');
+  el.textContent=ok?'✓ Token gespeichert – Discogs aktiv':'⚠ Kein Token – nur manuelle Eingabe möglich';
+}
+
+async function startScan(){
+  const btn=document.getElementById('btnStartScan');
+  const area=document.getElementById('scanArea');
+  const video=document.getElementById('scanVideo');
+  const info=document.getElementById('scanInfo');
+
+  if(scanStream){
+    stopScan();
+    return;
+  }
+  try{
+    scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    video.srcObject=scanStream;
+    area.style.display='flex';
+    btn.textContent='⏹ Kamera stoppen';
+    info.textContent='Barcode in den Rahmen halten…';
+
+    // Use BarcodeDetector if available (Chrome/Safari)
+    if('BarcodeDetector' in window){
+      const detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']});
+      scanInterval=setInterval(async()=>{
+        try{
+          const barcodes=await detector.detect(video);
+          if(barcodes.length>0){
+            const code=barcodes[0].rawValue;
+            stopScan();
+            info.textContent='Barcode gefunden: '+code;
+            lookupBarcode(code);
+          }
+        }catch(e){}
+      },400);
+    } else {
+      info.textContent='BarcodeDetector nicht verfügbar – bitte manuell eingeben';
+    }
+  }catch(e){
+    info.textContent='Kamera-Zugriff verweigert: '+e.message;
+  }
+}
+
+function stopScan(){
+  if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}
+  if(scanInterval){clearInterval(scanInterval);scanInterval=null;}
+  document.getElementById('scanArea').style.display='none';
+  document.getElementById('btnStartScan').textContent='📷 Kamera starten';
+}
+
+async function lookupBarcode(code){
+  code=String(code).trim();
+  if(!code)return;
+  const info=document.getElementById('scanInfo');
+  info.textContent='Suche auf Discogs…';
+  document.getElementById('addForm').classList.add('visible');
+
+  if(!discogsToken){
+    info.textContent='Kein Discogs-Token – bitte manuell ausfüllen.';
+    document.getElementById('barcodeManual').value=code;
+    return;
+  }
+
+  try{
+    const url=`https://api.discogs.com/database/search?barcode=${encodeURIComponent(code)}&token=${discogsToken}&per_page=1`;
+    const resp=await fetch(url,{headers:{'User-Agent':'PatCollection/1.0'}});
+    const data=await resp.json();
+    if(data.results&&data.results.length>0){
+      const r=data.results[0];
+      const parts=(r.title||'').split(' - ');
+      const artist=parts[0]||'';
+      const title=parts.slice(1).join(' - ')||r.title||'';
+      const year=r.year||'';
+      const fmt=r.formats&&r.formats[0]?r.formats[0].name:'';
+      const cover=r.cover_image||r.thumb||'';
+
+      // Fill form
+      document.getElementById('fArtist').value=artist;
+      document.getElementById('fTitle').value=title;
+      document.getElementById('fYear').value=year;
+      if(fmt){
+        const sel=document.getElementById('fFormat');
+        for(let i=0;i<sel.options.length;i++){
+          if(sel.options[i].value.toLowerCase().includes(fmt.toLowerCase())){sel.selectedIndex=i;break;}
+        }
+      }
+
+      // Show preview
+      const prev=document.getElementById('discogsPreview');
+      prev.classList.add('visible');
+      document.getElementById('discogsImg').src=cover;
+      if(cover && !cover.includes('spacer')){
+        document.getElementById('coverPreviewBox').innerHTML=`<img src="${cover}">`;
+      }
+      document.getElementById('discogsPreviewTitle').textContent=r.title||'';
+      document.getElementById('discogsPreviewSub').textContent=[year, r.label&&r.label[0], r.country].filter(Boolean).join(' · ');
+      info.textContent='✓ Gefunden – bitte Angaben prüfen';
+    } else {
+      info.textContent='Nicht gefunden – bitte manuell ausfüllen';
+      document.getElementById('barcodeManual').value=code;
+    }
+  }catch(e){
+    info.textContent='Fehler: '+e.message;
+  }
+}
+
+function saveNewEntry(){
+  const artist=document.getElementById('fArtist').value.trim();
+  const title=document.getElementById('fTitle').value.trim();
+  if(!artist||!title){alert('Bitte Künstler und Titel ausfüllen.');return;}
+
+  const entry={
+    artist,
+    artistSort: artist,
+    title,
+    year: document.getElementById('fYear').value.trim(),
+    format: document.getElementById('fFormat').value,
+    special: document.getElementById('fSpecial').value.trim(),
+    notes: document.getElementById('fNotes').value.trim(),
+    isLive: false,
+    cover: manualCoverDataUrl || document.getElementById('discogsImg').src||'',
+    tracklist: [],
+    labelNr: '',
+    discs: 1,
+    upc: '',
+    addedAt: new Date().toISOString()
+  };
+
+  // Save to localStorage
+  const existing=JSON.parse(localStorage.getItem('patNewEntries')||'[]');
+  existing.unshift(entry);
+  localStorage.setItem('patNewEntries',JSON.stringify(existing));
+
+  // Add to RAW so it shows in collection
+  RAW.unshift(entry);
+
+  // Re-render collection
+  filterAndRender();
+
+  // Reset form
+  document.getElementById('addForm').classList.remove('visible');
+  document.getElementById('discogsPreview').classList.remove('visible');
+  document.getElementById('fArtist').value='';
+  document.getElementById('fTitle').value='';
+  document.getElementById('fYear').value='';
+  document.getElementById('fSpecial').value='';
+  document.getElementById('fNotes').value='';
+  document.getElementById('barcodeManual').value='';
+  manualCoverDataUrl='';
+  document.getElementById('coverPreviewBox').innerHTML='♪';
+  document.getElementById('fCoverFile').value='';
+  document.getElementById('scanInfo').textContent='Barcode unter die Kamera halten';
+
+  // Toast
+  const toast=document.getElementById('addToast');
+  toast.classList.add('show');
+  setTimeout(()=>toast.classList.remove('show'),2500);
+}
+
+function renderNewEntries(){
+  const entries=JSON.parse(localStorage.getItem('patNewEntries')||'[]');
+  document.getElementById('newEntriesCount').textContent=entries.length+' Eintr\u00e4ge';
+  const list=document.getElementById('newEntriesList');
+  if(!entries.length){
+    list.innerHTML='<div class="empty"><div class="empty-icon">📭</div>Noch keine neuen Einträge.</div>';
+    return;
+  }
+  let html='';
+  for(let i=0;i<entries.length;i++){
+    const e=entries[i];
+    const fg=fmtGroup(e.format);const fc=fmtCls(fg);
+    const d=new Date(e.addedAt);
+    const dateStr=d.getDate()+'. '+MONTHS_SHORT[d.getMonth()]+' '+d.getFullYear();
+    html+=`<div class="new-entry-row">
+      ${e.cover?`<img src="${e.cover}" style="width:44px;height:44px;border-radius:6px;object-fit:cover;border:1px solid var(--border);flex-shrink:0" onerror="this.remove()">`:'<div style="width:44px;height:44px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--border)">♪</div>'}
+      <div class="new-entry-info">
+        <div class="new-entry-artist">${escHtml(e.artist)}</div>
+        <div class="new-entry-title">${escHtml(e.title)}</div>
+        <div class="new-entry-meta">
+          <span class="album-year">${e.year||'—'}</span>
+          <span class="fmt-badge fmt-${fc}">${escHtml(fmtShort(e.format))}</span>
+          ${e.special?`<span class="special-tag">✦ ${escHtml(e.special)}</span>`:''}
+          <span class="new-entry-date">Hinzugefügt: ${dateStr}</span>
+        </div>
+      </div>
+      <button class="btn-delete-entry" onclick="deleteNewEntry(${i})" title="Löschen">✕</button>
+    </div>`;
+  }
+  list.innerHTML=html;
+}
+
+function deleteNewEntry(idx){
+  if(!confirm('Eintrag löschen?'))return;
+  const entries=JSON.parse(localStorage.getItem('patNewEntries')||'[]');
+  entries.splice(idx,1);
+  localStorage.setItem('patNewEntries',JSON.stringify(entries));
+  renderNewEntries();
+}
+
+
+
+// Manual cover upload
+let manualCoverDataUrl = '';
+
+function handleCoverUpload(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    manualCoverDataUrl = e.target.result;
+    const box = document.getElementById('coverPreviewBox');
+    box.innerHTML = `<img src="${manualCoverDataUrl}">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── COVER IMPORT ─────────────────────────────────────
+let coverImportRunning = false;
+let coverImportStop = false;
+
+// Load saved covers into RAW on startup
+function loadSavedCovers(){
+  const covers = JSON.parse(localStorage.getItem('patCovers') || '{}');
+  let count = 0;
+  for(const a of RAW){
+    const key = coverKey(a);
+    if(covers[key] && !a.cover){
+      a.cover = covers[key];
+      count++;
+    }
+  }
+  console.log('Covers loaded from cache:', count);
+}
+
+function coverKey(a){
+  return (a.artist + '|' + a.title).toLowerCase().replace(/[^a-z0-9|]/g,'').slice(0,80);
+}
+
+async function startCoverImport(){
+  if(!discogsToken){
+    alert('Bitte zuerst den Discogs-Token eingeben.');
+    return;
+  }
+  if(coverImportRunning) return;
+  coverImportRunning = true;
+  coverImportStop = false;
+
+  document.getElementById('btnCoverImport').disabled = true;
+  document.getElementById('btnCoverStop').style.display = 'block';
+
+  const covers = JSON.parse(localStorage.getItem('patCovers') || '{}');
+  const total = RAW.length;
+  let done = 0;
+  let found = 0;
+  let skipped = 0;
+  const log = document.getElementById('coverLog');
+
+  function addLog(msg){
+    log.innerHTML = msg + '<br>' + log.innerHTML;
+  }
+
+  for(const a of RAW){
+    if(coverImportStop) break;
+
+    const key = coverKey(a);
+
+    // Skip if already have cover
+    if(covers[key] || a.cover){
+      skipped++;
+      done++;
+      updateCoverProgress(done, total, found, skipped);
+      continue;
+    }
+
+    try{
+      const q = encodeURIComponent(a.title);
+      const artist = encodeURIComponent(a.artist);
+      const url = `https://api.discogs.com/database/search?release_title=${q}&artist=${artist}&token=${discogsToken}&per_page=1&type=release`;
+      const resp = await fetch(url, {headers:{'User-Agent':'PatCollection/1.0'}});
+
+      // Handle rate limiting
+      if(resp.status === 429){
+        addLog('Rate limit – warte 10 Sek…');
+        await sleep(10000);
+        continue;
+      }
+
+      const data = await resp.json();
+      if(data.results && data.results.length > 0){
+        const img = data.results[0].cover_image || data.results[0].thumb || '';
+        if(img && !img.includes('spacer')){
+          covers[key] = img;
+          a.cover = img;
+          found++;
+          addLog('✓ ' + a.artist + ' – ' + a.title);
+        }
+      }
+    } catch(e){
+      addLog('✗ Fehler: ' + e.message);
+    }
+
+    done++;
+    updateCoverProgress(done, total, found, skipped);
+
+    // Save every 20 entries
+    if(done % 20 === 0){
+      localStorage.setItem('patCovers', JSON.stringify(covers));
+    }
+
+    // Rate limit: 1 req/sec
+    await sleep(1100);
+  }
+
+  // Final save
+  localStorage.setItem('patCovers', JSON.stringify(covers));
+  coverImportRunning = false;
+  document.getElementById('btnCoverImport').disabled = false;
+  document.getElementById('btnCoverStop').style.display = 'none';
+  document.getElementById('coverProgressText').textContent = coverImportStop ? 'Gestoppt – ' + found + ' Cover gefunden' : 'Fertig! ' + found + ' Cover geladen';
+  filterAndRender();
+}
+
+function stopCoverImport(){
+  coverImportStop = true;
+  document.getElementById('btnCoverStop').style.display = 'none';
+  document.getElementById('btnCoverImport').disabled = false;
+}
+
+function updateCoverProgress(done, total, found, skipped){
+  const pct = Math.round(done / total * 100);
+  document.getElementById('coverProgressBar').style.width = pct + '%';
+  document.getElementById('coverProgressPct').textContent = pct + '%';
+  document.getElementById('coverProgressText').textContent = done + ' / ' + total + ' · ' + found + ' Cover · ' + skipped + ' übersprungen';
+}
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// Load saved entries into RAW on startup
+function loadSavedEntries(){
+  const saved=JSON.parse(localStorage.getItem('patNewEntries')||'[]');
+  for(const e of saved)RAW.unshift(e);
+}
+
+// ── INIT ──────────────────────────────────────────────
+async function init(){
+  const overlay=document.getElementById('loadOverlay');
+  const text=document.getElementById('loadText');
+  try{
+    await loadCollectionFromSupabase();
+  }catch(e){
+    document.getElementById('loadSpinner').style.display='none';
+    text.classList.add('error');
+    text.textContent='Sammlung konnte nicht geladen werden: '+e.message;
+    const retry=document.createElement('button');
+    retry.className='load-retry';
+    retry.textContent='Erneut versuchen';
+    retry.onclick=()=>location.reload();
+    overlay.appendChild(retry);
+    return;
+  }
+  buildConcertMap();
+  loadSavedEntries();
+  loadSavedCovers();
+  filterAndRender();
+  overlay.classList.add('hidden');
+  setTimeout(()=>overlay.remove(),300);
+}
+init();
+
+</script>
+
+
+</body>
+</html>
