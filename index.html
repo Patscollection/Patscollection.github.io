@@ -115,6 +115,13 @@ main{padding:6px 0 60px;}
 .add-view.active{display:block;}
 .add-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
 .add-section-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;color:var(--accent);margin-bottom:12px;}
+.add-token-wrap{display:flex;gap:8px;align-items:center;}
+.add-token-wrap input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:inherit;font-size:13px;outline:none;}
+.add-token-wrap input:focus{border-color:var(--accent);}
+.btn-save-token{background:var(--accent);color:#f4ede0;font-family:'Bebas Neue',sans-serif;font-size:14px;padding:9px 16px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap;}
+.token-status{font-size:12px;margin-top:6px;}
+.token-ok{color:var(--seen);}
+.token-missing{color:var(--live);}
 
 /* Scanner */
 .scan-area{position:relative;width:100%;border-radius:10px;overflow:hidden;background:#000;aspect-ratio:1;margin-bottom:12px;display:flex;align-items:center;justify-content:center;}
@@ -389,6 +396,24 @@ table.tracks tr:hover td{background:var(--surface2);}
 <!-- ADD NEW ENTRY -->
 <div id="viewAdd" class="add-view">
 
+  <!-- Owner login — required before covers get written back to Supabase -->
+  <div class="add-section">
+    <div class="add-section-title">🔒 Owner-Login</div>
+    <div id="loginForm">
+      <div class="add-token-wrap" style="margin-bottom:8px">
+        <input type="email" id="loginEmail" placeholder="E-Mail">
+      </div>
+      <div class="add-token-wrap">
+        <input type="password" id="loginPassword" placeholder="Passwort">
+        <button class="btn-save-token" onclick="handleLogin()">Login</button>
+      </div>
+    </div>
+    <div id="logoutForm" style="display:none">
+      <button class="btn-save-token" onclick="handleLogout()">Logout</button>
+    </div>
+    <div class="token-status" id="authStatus"></div>
+  </div>
+
   <!-- Barcode Scanner -->
   <div class="add-section">
     <div class="add-section-title">📷 Barcode Scannen</div>
@@ -585,6 +610,87 @@ function discogsFetch(params){
   return fetch(url,{headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
 }
 
+// ── AUTH (owner login — enables writing covers back to Supabase) ──
+let authSession = JSON.parse(localStorage.getItem('patAuth') || 'null');
+
+function isLoggedIn(){ return !!authSession; }
+
+function saveSession(s){
+  authSession = s ? {
+    access_token: s.access_token,
+    refresh_token: s.refresh_token,
+    expires_at: Date.now() + (s.expires_in * 1000),
+  } : null;
+  if(authSession) localStorage.setItem('patAuth', JSON.stringify(authSession));
+  else localStorage.removeItem('patAuth');
+}
+
+async function authLogin(email, password){
+  const resp = await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=password', {
+    method:'POST',
+    headers:{apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email,password})
+  });
+  if(!resp.ok) throw new Error((await resp.json()).error_description || 'Login fehlgeschlagen');
+  saveSession(await resp.json());
+}
+
+function authLogout(){ saveSession(null); }
+
+// Returns a valid access token, refreshing it first if it's expired or
+// about to expire (bulk cover imports can run for an hour+).
+async function authToken(){
+  if(!authSession) throw new Error('Nicht eingeloggt');
+  if(Date.now() < authSession.expires_at - 60000) return authSession.access_token;
+  const resp = await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=refresh_token', {
+    method:'POST',
+    headers:{apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({refresh_token:authSession.refresh_token})
+  });
+  if(!resp.ok){ saveSession(null); throw new Error('Sitzung abgelaufen — bitte neu einloggen'); }
+  saveSession(await resp.json());
+  return authSession.access_token;
+}
+
+// Authenticated write — only succeeds if logged in (RLS blocks anon writes).
+async function sbWrite(path, method, body){
+  const token = await authToken();
+  const resp = await fetch(SUPABASE_URL+'/rest/v1/'+path, {
+    method,
+    headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=minimal'},
+    body:JSON.stringify(body)
+  });
+  if(!resp.ok) throw new Error('Supabase-Schreibfehler '+resp.status+': '+await resp.text());
+}
+
+function updateAlbumCover(dbId, coverUrl){
+  return sbWrite('albums?id=eq.'+dbId, 'PATCH', {cover_url: coverUrl});
+}
+
+function updateAuthUI(){
+  const status=document.getElementById('authStatus');
+  document.getElementById('loginForm').style.display=isLoggedIn()?'none':'';
+  document.getElementById('logoutForm').style.display=isLoggedIn()?'':'none';
+  status.className='token-status '+(isLoggedIn()?'token-ok':'token-missing');
+  status.textContent=isLoggedIn()?'✓ Eingeloggt — Cover werden dauerhaft gespeichert':'⚠ Nicht eingeloggt — Cover-Suche/Import ist deaktiviert';
+}
+
+async function handleLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const password=document.getElementById('loginPassword').value;
+  if(!email||!password)return;
+  try{
+    await authLogin(email,password);
+    document.getElementById('loginPassword').value='';
+    updateAuthUI();
+  }catch(e){ alert('Login fehlgeschlagen: '+e.message); }
+}
+
+function handleLogout(){
+  authLogout();
+  updateAuthUI();
+}
+
 async function sbFetch(path){
   const resp=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
   if(!resp.ok)throw new Error('Supabase '+resp.status+': '+await resp.text());
@@ -606,7 +712,7 @@ async function sbFetchAll(path){
 }
 
 async function loadCollectionFromSupabase(){
-  const albumsSelect='title,format,year,special_edition,notes,is_live,cover_url,label_nr,discs,upc,'+
+  const albumsSelect='id,title,format,year,special_edition,notes,is_live,cover_url,label_nr,discs,upc,'+
     'artists(name,name_sort),'+
     'album_discs(disc_number,disc_title,album_tracks(position,title,duration))';
   const query='albums?select='+encodeURIComponent(albumsSelect)+
@@ -615,6 +721,7 @@ async function loadCollectionFromSupabase(){
   const rows=await sbFetchAll(query);
   for(const r of rows){
     RAW.push({
+      dbId:r.id,
       artist:r.artists.name,
       artistSort:r.artists.name_sort,
       title:r.title,
@@ -960,7 +1067,7 @@ async function fetchDiscogscover(){
   }catch(e){alert('Fehler: '+e.message);}
 }
 
-function saveEdit(){
+async function saveEdit(){
   const group = window._groupData.find(g => g.artist === editArtistName);
   if(!group) return;
   const a = group.albums[editAlbumIdx];
@@ -975,13 +1082,16 @@ function saveEdit(){
   a.notes = document.getElementById('editNotes').value.trim();
 
   // Handle cover
+  let coverChanged = false;
   if(editCoverDataUrl === 'REMOVE'){
     a.cover = '';
+    coverChanged = true;
     const covers = JSON.parse(localStorage.getItem('patCovers')||'{}');
     delete covers[coverKey(a)];
     localStorage.setItem('patCovers', JSON.stringify(covers));
   } else if(editCoverDataUrl){
     a.cover = editCoverDataUrl;
+    coverChanged = true;
     const covers = JSON.parse(localStorage.getItem('patCovers')||'{}');
     covers[coverKey(a)] = editCoverDataUrl;
     localStorage.setItem('patCovers', JSON.stringify(covers));
@@ -996,9 +1106,23 @@ function saveEdit(){
   filterAndRender();
 
   const toast = document.getElementById('addToast');
-  toast.textContent = '✓ Gespeichert!';
   toast.classList.add('show');
   setTimeout(()=>toast.classList.remove('show'), 2000);
+
+  if(coverChanged && a.dbId){
+    if(!isLoggedIn()){
+      toast.textContent = '⚠ Cover nur lokal – zum dauerhaften Speichern einloggen';
+      return;
+    }
+    try{
+      await updateAlbumCover(a.dbId, a.cover || null);
+      toast.textContent = '✓ Gespeichert (Cover dauerhaft in Supabase)';
+    }catch(e){
+      toast.textContent = '⚠ Cover lokal gespeichert, Supabase-Schreiben fehlgeschlagen';
+    }
+  } else {
+    toast.textContent = '✓ Gespeichert!';
+  }
 }
 
 function deleteEntry(){
@@ -1256,6 +1380,10 @@ function coverKey(a){
 }
 
 async function startCoverImport(){
+  if(!isLoggedIn()){
+    alert('Bitte zuerst als Owner einloggen — sonst werden gefundene Cover nicht dauerhaft gespeichert.');
+    return;
+  }
   if(coverImportRunning) return;
   coverImportRunning = true;
   coverImportStop = false;
@@ -1301,6 +1429,9 @@ async function startCoverImport(){
       if(data.results && data.results.length > 0){
         const img = data.results[0].cover_image || data.results[0].thumb || '';
         if(img && !img.includes('spacer')){
+          if(a.dbId){
+            await updateAlbumCover(a.dbId, img);
+          }
           covers[key] = img;
           a.cover = img;
           found++;
@@ -1308,7 +1439,7 @@ async function startCoverImport(){
         }
       }
     } catch(e){
-      addLog('✗ Fehler: ' + e.message);
+      addLog('✗ Fehler: ' + a.artist + ' – ' + a.title + ': ' + e.message);
     }
 
     done++;
@@ -1374,6 +1505,7 @@ async function init(){
   loadSavedEntries();
   loadSavedCovers();
   filterAndRender();
+  updateAuthUI();
   overlay.classList.add('hidden');
   setTimeout(()=>overlay.remove(),300);
 }
